@@ -9,18 +9,6 @@ let read_all_as_string filename =
   close_in ic;
   content
 
-(* let split_on_first_char ch s =
-  try
-    let idx = String.index s ch in
-    let before = String.sub s 0 idx in
-    let after = String.sub s (idx + 1) (String.length s - idx - 1) in
-    (before, after)
-  with Not_found -> (s, "") *)
-
-
-(* let regexp = Str.regexp "ul(\\([0-9]\\{1,3\\},[0-9]\\{1,3\\}\\))" *)
-(* let regexp = Str.regexp "mul(\\([0-9]\\{1,3\\}\\),\\([0-9]\\{1,3\\}\\))" *)
-
 let extract_result s = 
   match s with
     | "" -> failwith "invalid string"
