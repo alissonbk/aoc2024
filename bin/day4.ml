@@ -34,29 +34,30 @@ type pos = {x : int; y : int}
 
 (* return matrix of positions valid in dim with curr excluded *)
 (* walk size need to have curr excluded "if its a word should be word size - 1" *)
-let get_valid_positions (curr: pos) (dim: pos) (walk_size : int) : pos array array =
+let get_valid_positions (curr: pos) (dim: pos) (walk_size : int) (only_diagonals: bool) : pos array array =
+  (* let matrix_length = match only_diagonals with | true -> 4 | false -> 8 in *)
   let arr = Array.make_matrix 8 walk_size {x = (-1); y = (-1) } in
   (* printf "walk size: %d\ncurr : (x %d, y %d)\ndim: (x %d, y %d)\n" walk_size curr.x curr.y dim.x dim.y; *)
   let valid_left = (curr.x - walk_size) >= 0 in
   let valid_right = (curr.x + walk_size) < dim.x in  
   let valid_down = (curr.y + walk_size) < dim.y in
   let valid_up = (curr.y - walk_size) >= 0 in  
-  if valid_left then    
+  if valid_left && not only_diagonals then    
     for i = 1 to walk_size do 
       arr.(0).(i-1) <- { x = (curr.x - i); y = curr.y }
     done;
   (* -> *)
-  if valid_right then    
+  if valid_right && not only_diagonals then    
     for i = 1 to walk_size do 
       arr.(1).(i-1) <- { x = (curr.x + i); y = curr.y }
     done;
   (* \/ *)      
-  if valid_down  then
+  if valid_down && not only_diagonals  then
     for i = 1 to walk_size do 
       arr.(2).(i-1) <- { x = curr.x; y = (curr.y + i) }
     done;
   (* /\ *)
-  if valid_up then
+  if valid_up && not only_diagonals then
     for i = 1 to walk_size do 
       arr.(3).(i-1) <- { x = curr.x; y = (curr.y - i) }
     done;
@@ -76,8 +77,7 @@ let get_valid_positions (curr: pos) (dim: pos) (walk_size : int) : pos array arr
       arr.(6).(i-1) <- { x = (curr.x - i); y = (curr.y + i) }
     done;
   (* \/ -> *)
-  if valid_down && valid_right then 
-    printf "here";
+  if valid_down && valid_right then     
     for i = 1 to walk_size do 
       arr.(7).(i-1) <- { x = (curr.x + i); y = (curr.y + i) }
     done;  
@@ -88,14 +88,13 @@ let string_to_match = "MAS"
 let num_chars_to_find = String.length string_to_match
 
 let puzzle1 =
-  let matrix = create_matrix file_name in
-  matrix |> Array.iter (fun a -> a |> Array.iter (printf "%c"); printf "\n");
+  let matrix = create_matrix file_name in  
   let sum = ref 0 in
   for i = 0 to (Array.length matrix) - 1 do 
     let curr_arr = matrix.(i) in
     for j = 0 to (Array.length curr_arr) - 1 do 
       if curr_arr.(j) = 'X' then
-        let vp_matrix = get_valid_positions {x = j; y = i} {x = (Array.length curr_arr); y = (Array.length matrix)} num_chars_to_find in
+        let vp_matrix = get_valid_positions {x = j; y = i} {x = (Array.length curr_arr); y = (Array.length matrix)} num_chars_to_find false in
         for i2 = 0 to (Array.length vp_matrix) - 1 do
           let pos_arr = vp_matrix.(i2) in
           let arr_of_chars = Array.make (Array.length pos_arr) ' ' in
@@ -116,6 +115,41 @@ let puzzle1 =
   !sum
 
 
+let append_item_ref lst e = lst := !lst @ [e]
+
+let validate_list lst : bool =
+  match lst with
+    | [] -> false
+    | e1 :: e2 :: [] -> 
+      if (e1.x <> e2.x) && (e1.y <> e2.y) then false else true
+    | _ -> false
+let puzzle2 =
+  let matrix = create_matrix file_name in  
+  let sum = ref 0 in
+  for i = 0 to (Array.length matrix) - 1 do 
+    let curr_arr = matrix.(i) in
+    for j = 0 to (Array.length curr_arr) - 1 do 
+      if curr_arr.(j) = 'A' then (
+        let vp_matrix = get_valid_positions {x = j; y = i} {x = (Array.length curr_arr); y = (Array.length matrix)} 1 true in
+        let mcount = ref [] in
+        let scount = ref [] in
+        for i2 = 0 to (Array.length vp_matrix) - 1 do          
+          let pos_arr = vp_matrix.(i2) in                   
+          if pos_arr.(0).x <> (-1) then
+          (                  
+            let curr_char = matrix.(pos_arr.(0).y).(pos_arr.(0).x) in            
+            if curr_char = 'M' then append_item_ref mcount {x = (pos_arr.(0).x); y = pos_arr.(0).y};
+            if curr_char = 'S' then append_item_ref scount {x = (pos_arr.(0).x); y = pos_arr.(0).y};
+          );          
+        done;
+        if validate_list !mcount && validate_list !scount then sum := (!sum + 1);          
+      );
+    done
+  done;
+  !sum
+
+
 let _ =
-  puzzle1 |> printf "result: %d";
+  puzzle1 |> printf "result 1: %d";
+  puzzle2 |> printf "result 2: %d";
   printf "\n"
