@@ -57,11 +57,7 @@ let move_based_on_pointer pointer move_forward =
     | LEFT -> if move_forward then {x= (pointer.pos.x - 1); y = pointer.pos.y} else {x= (pointer.pos.x + 1); y = pointer.pos.y}    
 
 
-let puzzle1 = 
-  let input, pointer_location = read_input in
-  input |> Array.iter (fun x -> Array.iter (printf "%c") x; printf "\n");
-  ignore pointer_location.side;
-  printf "pointer location: %d %d \n" pointer_location.pos.x pointer_location.pos.y;
+let puzzle1 input pointer_location =     
   let visited_table = Hashtbl.create 5000 in
   let sumr = ref 1 in  
   Hashtbl.add visited_table pointer_location.pos true;
@@ -80,11 +76,63 @@ let puzzle1 =
         )
       )
     with
-      | Invalid_argument _ -> printf "\nout of bounds\n"; !sumr
+      | Invalid_argument _ -> !sumr
   in
   loop pointer_location
 
+
+let is_inf_looping starting_point visted_t = 
+  try     
+    Hashtbl.find visted_t starting_point > 10
+  with
+    | Not_found -> false
+
+let safe_get_ht htb sp =
+  try
+    Hashtbl.find htb sp
+  with
+    | Not_found -> 0
+
+let is_a_infinity_loop input pointer_location : bool =    
+  let visited_table = Hashtbl.create 1000 in    
+  let starting_point = pointer_location.pos in    
+  Hashtbl.add visited_table starting_point 1;
+  let rec loop pointer_location =
+    try
+      let new_pos = move_based_on_pointer pointer_location true in
+      if input.(new_pos.y).(new_pos.x) = '#' then                 
+        loop { side = (rotate_ptr_side pointer_location.side); pos = pointer_location.pos }            
+      else (        
+          Hashtbl.replace visited_table new_pos ((safe_get_ht visited_table new_pos) + 1);  
+          if (is_inf_looping new_pos visited_table) then             
+            true                        
+          else (            
+            loop {side = pointer_location.side; pos = new_pos}   
+          )               
+      )
+    with
+      | Invalid_argument _ -> false      
+  in
+  loop pointer_location
+
+let puzzle2 input pointer_location =  
+  let sumr = ref 0 in  
+  for i = 0 to (Array.length input) - 1 do 
+    for j = 0 to (Array.length input.(i)) - 1 do       
+      if input.(i).(j) = '.'  then (        
+        input.(i).(j) <- '#';
+        let res = is_a_infinity_loop input pointer_location in
+        input.(i).(j) <- '.';
+        if res = true then sumr := !sumr + 1 else ()
+      )
+    done;
+  done;
+  !sumr
+
+
 let () =
-  puzzle1 |> printf "result: %d\n";
+  let input, pointer_location = read_input in
+  puzzle1 input pointer_location |> printf "result: %d\n";
+  puzzle2 input pointer_location |> printf "result: %d\n";
   printf "\n"
 
