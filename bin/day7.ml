@@ -6,8 +6,12 @@ let file_name = Sys.getcwd () ^ "/bin/input7.txt"
 type symbol = 
   | SUM 
   | MUL
+  | JOIN
 
-let apply_symbol = function | SUM -> ( + ) | MUL -> ( * )
+let apply_symbol = function 
+  | SUM -> ( + ) 
+  | MUL -> ( * ) 
+  | JOIN -> (fun a b -> ((string_of_int a) ^ (string_of_int b)) |> int_of_string )
 
 let calculate_array arr symbol_arr =       
   let iref = ref 0 in
@@ -31,7 +35,17 @@ let rec generate_combinations n =
     )
 ;;
 
-let puzzle1 =
+let rec generate_combinations_p2 n =
+  if n = 0 then
+    [[]] 
+  else
+    let smaller_combinations = generate_combinations_p2 (n - 1) in    
+    List.flatten (
+      List.map (fun comb -> [SUM :: comb; MUL :: comb; JOIN :: comb]) smaller_combinations
+    )
+;;
+
+let puzzle1 comb_func =
   let ic = open_in file_name in
   let rec sum_valids sum =
     try      
@@ -59,7 +73,7 @@ let puzzle1 =
             if Array.length n_arr = 1 then (
               if n_arr.(0) = test then (raise Found) else sum_valids sum
             ) else            
-            let combinations = generate_combinations ((Array.length n_arr) -1) in              
+            let combinations = comb_func ((Array.length n_arr) -1) in              
             let rec loop (combs: symbol list list) =
               match combs with
                 | [] -> sum_valids sum
@@ -68,7 +82,6 @@ let puzzle1 =
                   if res = test then raise Found else loop t
             in
             loop combinations;              
-            
 
           with
             | Found -> sum_valids (sum + test);          
@@ -80,6 +93,7 @@ let puzzle1 =
 
 
 let () =  
-  puzzle1 |> printf "result: %d\n%!";  
+  puzzle1 generate_combinations |> printf "result: %d\n%!";  
+  puzzle1 generate_combinations_p2 |> printf "result: %d\n%!";  
   printf "\n"
 
