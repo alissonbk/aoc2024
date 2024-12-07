@@ -30,9 +30,7 @@ let rec generate_combinations n =
     [[]] 
   else
     let smaller_combinations = generate_combinations (n - 1) in    
-    List.flatten (
-      List.map (fun comb -> [SUM :: comb; MUL :: comb]) smaller_combinations
-    )
+    List.map (fun comb -> [SUM :: comb; MUL :: comb]) smaller_combinations |> List.flatten
 ;;
 
 let rec generate_combinations_p2 n =
@@ -40,9 +38,7 @@ let rec generate_combinations_p2 n =
     [[]] 
   else
     let smaller_combinations = generate_combinations_p2 (n - 1) in    
-    List.flatten (
-      List.map (fun comb -> [SUM :: comb; MUL :: comb; JOIN :: comb]) smaller_combinations
-    )
+    List.map (fun comb -> [SUM :: comb; MUL :: comb; JOIN :: comb]) smaller_combinations |> List.flatten
 ;;
 
 let puzzle1 comb_func =
