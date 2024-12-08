@@ -30,16 +30,14 @@ let rec generate_combinations n =
     [[]] 
   else
     let smaller_combinations = generate_combinations (n - 1) in    
-    List.map (fun comb -> [SUM :: comb; MUL :: comb]) smaller_combinations |> List.flatten
-;;
+    smaller_combinations |> List.map (fun comb -> [SUM :: comb; MUL :: comb]) |> List.flatten
 
 let rec generate_combinations_p2 n =
   if n = 0 then
     [[]] 
   else
     let smaller_combinations = generate_combinations_p2 (n - 1) in    
-    List.map (fun comb -> [SUM :: comb; MUL :: comb; JOIN :: comb]) smaller_combinations |> List.flatten
-;;
+    smaller_combinations |> List.map (fun comb -> [SUM :: comb; MUL :: comb; JOIN :: comb]) |> List.flatten
 
 let puzzle1 comb_func =
   let ic = open_in file_name in
