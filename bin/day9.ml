@@ -121,23 +121,23 @@ let puzzle2 =
           () 
         else (
           Hashtbl.add htbl num 0;
-          let qty = get_id_qty id_arr i num in
-          printf "num %d qty %d\n" num qty;
+          let qty = get_id_qty id_arr i num in          
           let dots_start_idx = find_dots_valid_position id_arr qty in          
           match dots_start_idx with
-            | None -> printf "NO dots start idx\n"; ()
-            | Some idx ->   
-              printf "dot start idx : %d\n" idx;         
-              for j = idx to (idx + qty) - 1 do                  
-                Dynarray.set id_arr j (Number num);                                
-              done;  
-              for k = i downto (i - (qty - 1)) do                   
-                  Dynarray.set id_arr k Dot
-              done;                
-        )
-                
-  done;      
-  Dynarray.iter (function | Dot -> printf ".%!"; | Number n -> printf "(%d%!)" n) id_arr;       
+            | None -> ()
+            | Some idx ->                               
+              if idx < i then (
+                for j = idx to (idx + qty) - 1 do                  
+                  Dynarray.set id_arr j (Number num);                                
+                done;  
+                for k = (i - (qty - 1)) to i  do                   
+                    Dynarray.set id_arr k Dot
+                done;                
+              )
+              
+        );
+    (* Dynarray.iter (function | Dot -> printf ".%!"; | Number n -> printf "(%d%!)" n) id_arr; printf "\n";           *)
+  done;        
 
   let sum = ref Big_int.zero_big_int in
   Dynarray.iteri (fun idx v ->                
