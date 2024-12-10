@@ -36,7 +36,7 @@ let create_matrix =
   with
       | End_of_file -> matrix  
 
-let sum_paths matrix start_pos htbl =     
+let sum_paths_1 matrix start_pos htbl =     
   let rec loop new_pos curr_value ht =
     try      
     match matrix.(new_pos.y).(new_pos.x) with
@@ -62,21 +62,37 @@ let sum_paths matrix start_pos htbl =
   in
   loop start_pos (-1) htbl
 
-let puzzle1 =
+let sum_paths_2 matrix start_pos htbl =     
+  let rec loop new_pos curr_value ht =
+    try      
+    match matrix.(new_pos.y).(new_pos.x) with
+      | new_v when new_v = (curr_value + 1) && new_v = 9 ->                   
+        1
+      | new_v when new_v = (curr_value + 1) ->                
+        loop {x = new_pos.x; y = new_pos.y - 1} new_v ht +        
+        loop {x = new_pos.x + 1; y = new_pos.y} new_v ht +
+        loop {x = new_pos.x; y = new_pos.y + 1} new_v ht +
+        loop {x = new_pos.x - 1; y = new_pos.y} new_v ht
+      | _ -> 0
+    with
+      | Invalid_argument _ -> 0
+  in
+  loop start_pos (-1) htbl
+
+let puzzle sum_paths_func =
   let mx = create_matrix in
   let sumr = ref 0 in
-  let htbl = Hashtbl.create 1000 in
-  (* mx |> Array.iter (fun x -> x |> Array.iter (printf "%d"); printf "\n"); *)
+  let htbl = Hashtbl.create 1000 in  
   for i = 0 to (Array.length mx) -1 do 
     for j = 0 to (Array.length mx) -1 do 
       if mx.(i).(j) = 0 then (
-        sumr := !sumr + (sum_paths mx { x = j; y = i } htbl) 
+        sumr := !sumr + (sum_paths_func mx { x = j; y = i } htbl) 
       );
     done;
-  done;
-  (* Hashtbl.iter (fun key v -> printf "key: x: %d y: %d - value: x: %d y: %d\n" key.x key.y v.x v.y) htbl; *)
+  done;  
   !sumr
 
 let () =
-  puzzle1 |> printf "result %d";
-  printf "\n";
+  puzzle sum_paths_1 |> printf "result %d\n";
+  puzzle sum_paths_2 |> printf "result %d";
+  printf "\n"
