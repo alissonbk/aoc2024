@@ -9,7 +9,7 @@ let real_int_of_char c =  int_of_string (String.make 1 c)
 
 type id_array_el = Dot | Number of int
 
-(* let puzzle1 =
+let puzzle1 =
   let ic = open_in file_name in
   let input = (input_line ic) |> explode in
   let id_arr: id_array_el Dynarray.t = Dynarray.create () in  
@@ -47,7 +47,7 @@ type id_array_el = Dot | Number of int
       | Dot -> ()
       | Number v -> sum := Big_int.add_big_int !sum (Big_int.mult_int_big_int v (Big_int.big_int_of_int idx))
     ) id_arr;
-  !sum *)
+  !sum
 
 let get_id_qty darr curr_idx num =
   let exception Break of int in
@@ -107,8 +107,7 @@ let puzzle2 =
         Dynarray.add_last id_arr Dot
       done;      
     )    
-  done;    
-  Dynarray.iter (function | Dot -> printf "."; | Number n -> printf "(%d)" n) id_arr;       
+  done;      
   printf "\n";
   (* let dot_count = Dynarray.filter_map (fun a -> if a = Dot then Some a else None) id_arr |> Dynarray.length in   *)
 
@@ -148,6 +147,6 @@ let puzzle2 =
   !sum
 
 let () =
-  (* puzzle1 |> Big_int.string_of_big_int |> printf "\nresult: %s\n"; *)
+  puzzle1 |> Big_int.string_of_big_int |> printf "\nresult: %s\n";
   puzzle2 |> Big_int.string_of_big_int |> printf "\nresult 2: %s\n";
   printf "\n"
