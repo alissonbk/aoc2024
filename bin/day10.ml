@@ -18,7 +18,7 @@ let count_lines : int=
       input_line ic |> ignore;      
       sum (s + 1)
     with
-      | End_of_file -> close_in ic; printf "total of lines: %d\n" s; s
+      | End_of_file -> close_in ic; s
   in
   sum 0
 
@@ -36,33 +36,45 @@ let create_matrix =
   with
       | End_of_file -> matrix  
 
-
-
-let sum_paths matrix start_pos = 
-  let rec loop curr_pos curr_value =
-    match matrix.(curr_pos.y).(curr_pos.x) with
-      | v when v = 9 -> 1
-      | v when v = (curr_value + 1) -> 
-        loop {x = curr_pos.x; y = curr_pos.y - 1} v +
-        loop {x = curr_pos.x + 1; y = curr_pos.y} v +
-        loop {x = curr_pos.x; y = curr_pos.y + 1} v +
-        loop {x = curr_pos.x - 1; y = curr_pos.y} v
+let sum_paths matrix start_pos htbl =     
+  let rec loop new_pos curr_value ht =
+    try      
+    match matrix.(new_pos.y).(new_pos.x) with
+      | new_v when new_v = (curr_value + 1) && new_v = 9 ->                   
+        (match (Hashtbl.find_opt ht new_pos) with
+            | None -> 
+              Hashtbl.add ht new_pos start_pos;               
+              1
+            | Some sp ->                
+              if (sp.x = start_pos.x && sp.y = start_pos.y) then 0
+              else (
+                Hashtbl.add htbl new_pos start_pos;                
+                1
+            ))
+      | new_v when new_v = (curr_value + 1) ->                
+        loop {x = new_pos.x; y = new_pos.y - 1} new_v ht +        
+        loop {x = new_pos.x + 1; y = new_pos.y} new_v ht +
+        loop {x = new_pos.x; y = new_pos.y + 1} new_v ht +
+        loop {x = new_pos.x - 1; y = new_pos.y} new_v ht
       | _ -> 0
+    with
+      | Invalid_argument _ -> 0
   in
-  loop start_pos 0
-
+  loop start_pos (-1) htbl
 
 let puzzle1 =
   let mx = create_matrix in
   let sumr = ref 0 in
-  mx |> Array.iter (fun x -> x |> Array.iter (printf "%d"); printf "\n");
+  let htbl = Hashtbl.create 1000 in
+  (* mx |> Array.iter (fun x -> x |> Array.iter (printf "%d"); printf "\n"); *)
   for i = 0 to (Array.length mx) -1 do 
     for j = 0 to (Array.length mx) -1 do 
       if mx.(i).(j) = 0 then (
-        sumr := !sumr + (sum_paths mx { x = j; y = i })
+        sumr := !sumr + (sum_paths mx { x = j; y = i } htbl) 
       );
     done;
   done;
+  (* Hashtbl.iter (fun key v -> printf "key: x: %d y: %d - value: x: %d y: %d\n" key.x key.y v.x v.y) htbl; *)
   !sumr
 
 let () =
