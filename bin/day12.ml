@@ -99,55 +99,22 @@ let calculate_boundaries1 mx pos =
       in      
       let a, p = loop pos 0 0 in      
       a * p
+      
 
-
-(* could have conflicts *)
-type border_htbl_key = { border_char : char; border_pos : pos}
-let border_htbl = Hashtbl.create 100_000
-
-let is_prev_border mx curr_pos border_pos =
-  let border_char = mx.(border_pos.y).(border_pos.x) in
-  let positions_to_try = [
-    { x = border_pos.x + 1; y = border_pos.y };
-    { x = border_pos.x; y = border_pos.y + 1 };
-    { x = border_pos.x - 1; y = border_pos.y };
-    { x = border_pos.x; y = border_pos.y - 1 };
-  ] in
-  printf "border char %c\n" border_char;
-  let rec loop plist outsider_list = 
-    match plist with
-      | [] -> outsider_list
+(* missing middle jumps (e.g calculate how many times he jumped from 0 to 2 either x or y been y or x respectively equal)*)
+let calc_sides char_list =
+  let rec loop lst unique_x unique_y =
+    match lst with
+      | [] -> 
+        let len_x = (List.length unique_x) in
+        let len_y = (List.length unique_y) in
+        if len_x = 1 then len_y else if len_y = 1 then len_x else len_x + len_y
       | h :: t ->
-        ignore curr_pos;
-        (* if h = curr_pos then loop t outsider_list
-        else ( *)
-          try            
-            if mx.(h.y).(h.x) <> border_char then loop t (h :: outsider_list)
-            else loop t outsider_list
-          with
-            | Invalid_argument _ -> 
-              loop t (h :: outsider_list)
-        (* ) *)
+        let new_unique_x = if (List.mem h.x unique_x) then unique_x  else (h.x :: unique_x) in
+        let new_unique_y = if (List.mem h.y unique_y) then unique_y  else (h.y :: unique_y) in
+        loop t new_unique_x new_unique_y
   in
-  let outsiders_list = loop positions_to_try [] in  
-  let htkey = { border_char = border_char; border_pos = border_pos } in
-  let outsiders_without_cache = List.fold_left (
-      fun acc curr -> 
-        if (is_htbl_mem border_htbl htkey curr) 
-          then acc else curr :: acc
-      )
-    []
-    outsiders_list 
-  in    
-  if (List.length outsiders_without_cache) >= 2 then (
-    printf "\n";
-    List.iter (fun curr -> 
-      (* printf "added: x = %d y = %d - %!" curr.x curr.y;  *)
-      printf "added border pos: x = %d y = %d - %!" border_pos.x border_pos.y; 
-      htbl_add_or_join border_htbl htkey curr
-    ) outsiders_without_cache;
-    true
-  ) else false
+  loop char_list [] []
 
 
 let calculate_boundaries2 mx pos =   
@@ -157,46 +124,39 @@ let calculate_boundaries2 mx pos =
     if List.mem pos pos_list then 0 else (raise Not_found)
   with    
     | Not_found ->
-      let rec loop curr_pos area perimeter prev_pos =
+      let rec loop curr_pos area char_list =
         try
           let cc = mx.(curr_pos.y).(curr_pos.x) in
           let is_plant_cached = is_htbl_mem htbl {c= cc; is_the_plant= true} curr_pos in          
           if cc = plant_char then (
             if is_plant_cached then (
-              (area, perimeter)
+              (area, char_list)
             ) else (
-              htbl_add_or_join htbl {c = cc; is_the_plant = true} curr_pos;              
-              let a1, p1 = loop {x = curr_pos.x + 1; y = curr_pos.y} (area) perimeter curr_pos in
-              let a2, p2 = loop {x = curr_pos.x; y = curr_pos.y + 1} (area) perimeter curr_pos in
-              let a3, p3 = loop {x = curr_pos.x - 1; y = curr_pos.y} (area) perimeter curr_pos in
-              let a4, p4 = loop {x = curr_pos.x; y = curr_pos.y - 1} (area) perimeter curr_pos in
-              (a1 + a2 + a3 + a4) + 1, (p1 + p2 + p3 + p4)
+              htbl_add_or_join htbl {c = cc; is_the_plant = true} curr_pos;     
+              let new_char_list = curr_pos :: char_list in         
+              let a1, cl1 = loop {x = curr_pos.x + 1; y = curr_pos.y} (area) new_char_list in
+              let a2, cl2 = loop {x = curr_pos.x; y = curr_pos.y + 1} (area) new_char_list in
+              let a3, cl3 = loop {x = curr_pos.x - 1; y = curr_pos.y} (area) new_char_list in
+              let a4, cl4 = loop {x = curr_pos.x; y = curr_pos.y - 1} (area) new_char_list in
+              ((a1 + a2 + a3 + a4) + 1), cl1 @ cl2 @ cl3 @ cl4 @ new_char_list
             )
-          ) else (            
-            if (is_prev_border mx curr_pos prev_pos)  then 
-              (area, (perimeter + 1))
-            else (                            
-              (area, perimeter)
-            )              
+          ) else (                                                  
+            (area, char_list)
           )          
         with
-          | Invalid_argument _ -> 
-            if (is_prev_border mx curr_pos prev_pos)  then 
-              (area, (perimeter + 1))
-            else (                            
-              (area, perimeter)
-            )    
+          | Invalid_argument _ -> (area, char_list) 
             
       in      
-      let a, p = loop pos 0 0 {x = -1; y = -1} in      
-      printf "%c -> area %d p %d\n" plant_char a p;
-      a * p
+      let a, char_list = loop pos 0 [] in      
+      (* printf "char_list: "; char_list |> List.iter (fun p -> printf "x %d y %d" p.x p.y); *)
+      let sides = calc_sides char_list in
+      printf "%c -> area %d sides %d\n" plant_char a sides;
+      a * sides
 
 let puzzle calculate_boundaries_fun =
   let mx = create_matrix file_name in
   (* mx |> Array.iter (fun x -> Array.iter (printf "%c") x; printf "\n"); *)
-  let fodase = { c = '0'; is_the_plant = false} in ignore fodase.is_the_plant; ignore fodase.c;
-  let fodase2 = { border_char = '0'; border_pos = {x = -1; y = -1}} in ignore fodase2.border_char; ignore fodase2.border_pos;
+  let fodase = { c = '0'; is_the_plant = false} in ignore fodase.is_the_plant; ignore fodase.c;  
   let sumr = ref 0 in
   for y = 0 to (Array.length mx) - 1 do 
     for x = 0 to (Array.length mx) - 1 do 
