@@ -7,6 +7,16 @@ let explode str =
 
 type pos = {x : int; y : int}
 
+module PosComparable = struct
+  type t = pos
+  let compare p1 p2 =
+    match Stdlib.compare p1.x p2.x with
+    | 0 -> Stdlib.compare p1.y p2.y
+    | c -> c
+end
+
+module PosSet = Set.Make(PosComparable)
+
 let count_lines filename : int=
   let ic = open_in filename in
   let rec sum s =
@@ -101,57 +111,157 @@ let calculate_boundaries1 mx pos =
       a * p
       
 
-(* missing middle jumps (e.g calculate how many times he jumped from 0 to 2 either x or y been y or x respectively equal)*)
-let calc_sides char_list =
-  let rec loop lst unique_x unique_y =
-    match lst with
-      | [] -> 
-        let len_x = (List.length unique_x) in
-        let len_y = (List.length unique_y) in
-        if len_x = 1 then len_y else if len_y = 1 then len_x else len_x + len_y
-      | h :: t ->
-        let new_unique_x = if (List.mem h.x unique_x) then unique_x  else (h.x :: unique_x) in
-        let new_unique_y = if (List.mem h.y unique_y) then unique_y  else (h.y :: unique_y) in
-        loop t new_unique_x new_unique_y
+
+type htbl_key_2 = { c : char; is_the_plant : bool; start_pos : pos }
+let htbl2 : (htbl_key_2, pos list) Hashtbl.t = Hashtbl.create 100_000
+
+let ( ^@ ) = PosSet.union
+
+
+let get_duplicated_perimeters ht htbl_key outsider_duplicateds =  
+  let diff_plants = 
+    match Hashtbl.find_opt ht htbl_key with
+      | None -> []
+      | Some x -> x in
+  let out_of_bounds = 
+    match Hashtbl.find_opt ht { c = out_of_bounds_char; is_the_plant = false; start_pos = htbl_key.start_pos } with
+      | None -> []
+      | Some x -> x in
+  let all_elements = 
+    let rec loop odlst full_list =
+      match odlst with
+        | [] -> full_list
+        | h :: t ->
+          if List.mem h full_list then loop t full_list else loop t (h :: full_list)
+    in
+    loop outsider_duplicateds (diff_plants @ out_of_bounds)
+  in  
+  
+  (* ammount of outsiders that are twice duplicated, was counting 3 times as an outsider in puzzle1 TODO handle 4 times cases *)
+  let ammount_of_outsiders_duplicateds_twice =
+    let rec loop lst sum =
+      match lst with
+        | [] -> sum
+        | h :: t ->
+          if List.mem h t then (
+            let exception Break in            
+            let is_next_on_all_elements cp =            
+              let sumr = ref 0 in
+              try
+                let not_sure_how_much_should_be = 4 in
+                for i = 1 to not_sure_how_much_should_be do 
+                    if List.mem {x = cp.x + i; y = cp.y} all_elements && (i - !sumr = 1) then sumr := !sumr + 1;
+                done;          
+                if !sumr > 0 then raise Break;
+                for i = 1 to not_sure_how_much_should_be do 
+                    if List.mem {x = cp.x; y = cp.y + i} all_elements && (i - !sumr = 1) then sumr := !sumr + 1;
+                done;              
+                if !sumr > 0 then raise Break;
+                for i = 1 to not_sure_how_much_should_be do 
+                    if List.mem {x = cp.x - i; y = cp.y} all_elements && (i - !sumr = 1) then sumr := !sumr + 1;
+                done;                         
+                if !sumr > 0 then raise Break;                 
+                for i = 1 to not_sure_how_much_should_be do 
+                    if List.mem {x = cp.x; y = cp.y - i} all_elements && (i - !sumr = 1) then sumr := !sumr + 1;
+                done;                            
+                !sumr
+              with
+                | Break -> !sumr
+            in
+            loop t sum + is_next_on_all_elements h
+            (* if List.mem {x = h.x + 1; y = h.y} all_elements ||
+            List.mem {x = h.x; y = h.y + 1} all_elements ||
+            List.mem {x = h.x - 1; y = h.y} all_elements ||
+            List.mem {x = h.x; y = h.y - 1} all_elements then (
+              (* needs to do this but only + 1 in the exactly same             *)
+              
+              loop t sum + 1
+            ) 
+              
+            else
+              loop t sum *)
+          )
+          else loop t sum
+    in    
+    loop outsider_duplicateds 0
   in
-  loop char_list [] []
+
+  (* printf "outsiders : "; List.iter (fun p -> printf "(x: %d, y: %d) " p.x p.y) all_elements; printf "\n"; *)
+  let rec loop lst cached_list =
+    match lst with
+      | [] -> List.length cached_list
+      | h :: t ->
+        if List.mem h cached_list then loop t cached_list else
+        let rec loop2 curr_pos (new_cached_set: PosSet.t) =
+          (* printf "loop2"; *)
+          if List.mem curr_pos lst && not (PosSet.mem curr_pos new_cached_set) then (
+            let all_cached_sets = 
+              loop2 {x = curr_pos.x + 1; y = curr_pos.y} (PosSet.add curr_pos new_cached_set) ^@
+              loop2 {x = curr_pos.x; y = curr_pos.y + 1} (PosSet.add curr_pos new_cached_set) ^@
+              loop2 {x = curr_pos.x - 1; y = curr_pos.y} (PosSet.add curr_pos new_cached_set) ^@
+              loop2 {x = curr_pos.x; y = curr_pos.y - 1} (PosSet.add curr_pos new_cached_set) in            
+            (* printf "\n\nset length: %d\n" (PosSet.cardinal all_cached_sets);                         *)
+            all_cached_sets
+          ) else (
+            new_cached_set
+          )        
+        in
+        let new_cached_set = loop2 h PosSet.empty in
+        let new_cached_list_headless = (PosSet.to_list new_cached_set)|> List.tl in
+        loop t (new_cached_list_headless @ cached_list)
+  in
+  if htbl_key.c = 'C' then printf "ammout duplicated twice: %d\n" ammount_of_outsiders_duplicateds_twice;
+  printf "\n\nammount_of_outsiders_duplicateds_twice %d\n\n" ammount_of_outsiders_duplicateds_twice;
+  loop all_elements [] - ammount_of_outsiders_duplicateds_twice
+
 
 
 let calculate_boundaries2 mx pos =   
   let plant_char = mx.(pos.y).(pos.x) in
   try
-    let pos_list = Hashtbl.find htbl {c = plant_char; is_the_plant = true} in
+    let pos_list = Hashtbl.find htbl2 {c = plant_char; is_the_plant = true; start_pos = { x= -1; y = -1 }} in
     if List.mem pos pos_list then 0 else (raise Not_found)
   with    
     | Not_found ->
-      let rec loop curr_pos area char_list =
+      let rec loop curr_pos area perimeter (outside_duplicateds: pos list) =
         try
           let cc = mx.(curr_pos.y).(curr_pos.x) in
-          let is_plant_cached = is_htbl_mem htbl {c= cc; is_the_plant= true} curr_pos in          
+          let is_plant_cached = is_htbl_mem htbl2 {c= plant_char; is_the_plant= true; start_pos = { x= -1; y = -1 }} curr_pos in          
           if cc = plant_char then (
             if is_plant_cached then (
-              (area, char_list)
+              (area, perimeter, outside_duplicateds)
             ) else (
-              htbl_add_or_join htbl {c = cc; is_the_plant = true} curr_pos;     
-              let new_char_list = curr_pos :: char_list in         
-              let a1, cl1 = loop {x = curr_pos.x + 1; y = curr_pos.y} (area) new_char_list in
-              let a2, cl2 = loop {x = curr_pos.x; y = curr_pos.y + 1} (area) new_char_list in
-              let a3, cl3 = loop {x = curr_pos.x - 1; y = curr_pos.y} (area) new_char_list in
-              let a4, cl4 = loop {x = curr_pos.x; y = curr_pos.y - 1} (area) new_char_list in
-              ((a1 + a2 + a3 + a4) + 1), cl1 @ cl2 @ cl3 @ cl4 @ new_char_list
+              htbl_add_or_join htbl2 {c = plant_char; is_the_plant = true; start_pos = { x= -1; y = -1 }} curr_pos;              
+              let a1, p1, od1 = loop {x = curr_pos.x + 1; y = curr_pos.y} (area) perimeter outside_duplicateds in
+              let a2, p2, od2 = loop {x = curr_pos.x; y = curr_pos.y + 1} (area) perimeter outside_duplicateds in
+              let a3, p3, od3 = loop {x = curr_pos.x - 1; y = curr_pos.y} (area) perimeter outside_duplicateds in
+              let a4, p4, od4 = loop {x = curr_pos.x; y = curr_pos.y - 1} (area) perimeter outside_duplicateds in
+              (a1 + a2 + a3 + a4) + 1, (p1 + p2 + p3 + p4), (od1 @ od2 @ od3 @ od4)
             )
-          ) else (                                                  
-            (area, char_list)
+          ) else (
+            let is_outsider_cached = is_htbl_mem htbl2 {c= plant_char; is_the_plant= false; start_pos = pos} curr_pos in
+            if is_outsider_cached then               
+              (area, (perimeter + 1), (curr_pos :: outside_duplicateds))
+            else (
+              htbl_add_or_join htbl2 {c = plant_char; is_the_plant = false; start_pos = pos} curr_pos;
+              (area, (perimeter + 1), outside_duplicateds)
+            )              
           )          
         with
-          | Invalid_argument _ -> (area, char_list) 
+          | Invalid_argument _ -> 
+            let is_outsider_cached = is_htbl_mem htbl2 {c= out_of_bounds_char; is_the_plant= false; start_pos = pos} curr_pos in
+            if is_outsider_cached then (
+              (area, perimeter, outside_duplicateds)
+            ) else (
+              htbl_add_or_join htbl2 {c = out_of_bounds_char; is_the_plant = false; start_pos = pos} curr_pos;
+              (area, (perimeter + 1), outside_duplicateds)
+            )
             
       in      
-      let a, char_list = loop pos 0 [] in      
-      (* printf "char_list: "; char_list |> List.iter (fun p -> printf "x %d y %d" p.x p.y); *)
-      let sides = calc_sides char_list in
-      printf "%c -> area %d sides %d\n" plant_char a sides;
-      a * sides
+      let a, p, od = loop pos 0 0 [] in      
+      let duplicated_perimeters = get_duplicated_perimeters htbl2 { c = plant_char; is_the_plant = false; start_pos = pos} od in
+      printf "c %c a %d newP %d - duplicateds %d ods: %d\n" plant_char a (p - duplicated_perimeters) duplicated_perimeters (List.length od);      
+      a * (p - duplicated_perimeters)
 
 let puzzle calculate_boundaries_fun =
   let mx = create_matrix file_name in
@@ -167,7 +277,7 @@ let puzzle calculate_boundaries_fun =
 
 
 let () =
-  puzzle calculate_boundaries1 |> printf "result1 : %d\n";
+  puzzle calculate_boundaries1 |> printf "result1 : %d\n\n";
   Hashtbl.clear htbl;
   puzzle calculate_boundaries2 |> printf "result2 : %d";
   printf "\n"
