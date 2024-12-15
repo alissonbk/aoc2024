@@ -1,4 +1,4 @@
 (executable
  (public_name aoc)
- (name day12)
+ (name day13)
  (libraries aoc2024 str seq num))
