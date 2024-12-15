@@ -9,12 +9,12 @@ type claw_machine = { button_a : button_t; button_b : button_t; prize : button_t
 let blank_button_t = { x = -1; y = -1}
 let blank_claw_machine = { button_a = blank_button_t; button_b = blank_button_t; prize = blank_button_t;}
 
-let get_x_y str char_to_split add_10000000000000 =
+let get_x_y str char_to_split =
   match String.split_on_char ',' str with
     | [] -> failwith "invalid input2"
     | e1 :: e2 :: [] ->
       let get_after_plus_sign s = String.split_on_char char_to_split s
-        |> List.tl |> List.hd |> (fun x -> if add_10000000000000 then int_of_string ("10000000000000" ^ x) else int_of_string x) in
+        |> List.tl |> List.hd |> int_of_string in
       let x = get_after_plus_sign e1 in
       let y = get_after_plus_sign e2 in
       (x, y)     
@@ -29,23 +29,29 @@ let red_input is_puzzle_2 =
       match input_line ic with
         | "" -> loop (curr_machine :: machines) blank_claw_machine     
         | str when (String.contains str 'A') ->
-          let x, y = (get_x_y str '+' false) in
+          let x, y = (get_x_y str '+') in
           loop machines { 
             button_a = { x = x; y = y}; 
             button_b = curr_machine.button_b; 
             prize = curr_machine.prize }
         | str when (String.contains str 'B') ->
-          let x, y = (get_x_y str '+' false) in
+          let x, y = (get_x_y str '+') in
           loop machines { 
             button_a = curr_machine.button_a; 
             button_b = {x = x; y = y}; 
             prize = curr_machine.prize }
         | str when (String.contains str 'P') ->
-          let x, y = (get_x_y str '=' is_puzzle_2) in          
-          loop machines { 
-            button_a = curr_machine.button_a; 
-            button_b = curr_machine.button_b; 
-            prize = { x = x; y = y}}
+          let x, y = (get_x_y str '=') in     
+          if is_puzzle_2 then     
+            loop machines { 
+              button_a = curr_machine.button_a; 
+              button_b = curr_machine.button_b; 
+                prize = { x = x + 10000000000000; y = y + 10000000000000}}             
+          else
+             loop machines { 
+              button_a = curr_machine.button_a; 
+              button_b = curr_machine.button_b; 
+                prize = { x = x; y = y}}  
         | _ -> failwith "invalid input1"
     with
       | End_of_file -> curr_machine :: machines
